@@ -1,0 +1,240 @@
+{% extends "layot.html" %}
+
+{% block content %}
+<h4 class="text-center my-4" style="color: #66BB6A; font-family: 'Merriweather', serif; font-weight: 700; font-size: 2.0rem; text-transform: capitalize; letter-spacing: 1px; animation: fadeInUp 1s ease-in-out;">
+    Detect Plant Diseases 🌿 – Protect Your Crops with AI-Powered Analysis!
+</h4>
+
+<div class="container py-5">
+    <form action="/predict_disease" method="post"></form>
+    <!-- Image Gallery -->
+    <div class="row g-4 mb-4 flex-nowrap overflow-auto" style="animation: slideUp 1.5s; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-between;">
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-lg border-0">
+                <img src="{{ url_for('static', filename='disease2.jfif') }}" class="card-img-top" alt="Healthy Plant">
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-lg border-0">
+                <img src="{{ url_for('static', filename='disease1.jfif') }}" class="card-img-top" alt="Healthy Plant">
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-lg border-0">
+                <img src="{{ url_for('static', filename='disease3.jfif') }}" class="card-img-top" alt="Healthy Plant">
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-lg border-0">
+                <img src="{{ url_for('static', filename='disease4.jfif') }}" class="card-img-top" alt="Healthy Plant">
+            </div>
+        </div>
+    </div>
+    
+    
+    
+    
+
+    <!-- Main Card -->
+    <div class="card shadow-lg border-0" style="background-color: #2c3e50; border-radius: 12px; animation: slideUp 1.5s;">
+        <div class="card-body">
+            <h2 class="text-center text-light mb-4" style="animation: zoomIn 1s;">Upload Plant Image for Analysis</h2>
+            
+            <!-- Upload Zone -->
+            <div class="upload-zone d-flex flex-column justify-content-center align-items-center p-5 mb-4" id="dropZone" 
+                 onclick="document.getElementById('fileInput').click()" 
+                 style="border: 2px dashed #66BB6A; border-radius: 12px; background-color: rgba(255,255,255,0.05); cursor: pointer; min-height: 250px;">
+                <i class="bi bi-cloud-upload fs-1 text-success mb-3"></i>
+                <p class="text-light mb-2">Drag and drop your plant image here</p>
+                <p class="text-muted mb-2">or</p>
+                <p class="text-light mb-0">Click to select a file</p>
+                <input type="file" id="fileInput" accept="image/*" class="d-none" onchange="handleFile(this.files)">
+            </div>
+
+            <!-- Buttons -->
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <button class="btn btn-success btn-lg w-100" id="showImageBtn" disabled onclick="toggleImagePreview()" 
+                            style="animation: bounceIn 1s;">
+                        <i class="bi bi-eye"></i> Show Image
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-primary btn-lg w-100" id="predictBtn" disabled onclick="predict()" 
+                            style="animation: bounceIn 1s;">
+                        <i class="bi bi-search"></i> Predict Disease
+                    </button>
+                </div>
+            </div>
+        </form>
+
+            <!-- Image Preview -->
+            <div class="card mt-4 d-none" id="previewContainer" style="background-color: rgba(255,255,255,0.05);">
+                <div class="card-body text-center">
+                    <img id="imagePreview" class="img-fluid rounded" style="max-height: 400px;" alt="Preview">
+                </div>
+            </div>
+
+            <!-- Prediction Result -->
+            <div class="text-center mt-4 d-none" id="result" style="animation: pulse 2s infinite;">
+                <h2 class="text-light">Prediction Result:</h2>
+                <h3 class="text-info" id="predictionText"></h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Animations -->
+<style>
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes zoomIn {
+        from {
+            transform: scale(0.8);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    @keyframes bounceIn {
+        0% {
+            transform: scale(0.8);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.05);
+        }
+    }
+
+    .upload-zone.dragover {
+        background-color: rgba(255,255,255,0.1);
+        border-style: solid;
+    }
+</style>
+
+<!-- JavaScript -->
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewContainer = document.getElementById('previewContainer');
+    const predictBtn = document.getElementById('predictBtn');
+    const showImageBtn = document.getElementById('showImageBtn');
+    const result = document.getElementById('result');
+    let currentFile = null;
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        handleFile(e.dataTransfer.files);
+    });
+
+    function handleFile(files) {
+        if (files.length > 0) {
+            currentFile = files[0];
+            if (currentFile.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    showImageBtn.disabled = false;
+                    predictBtn.disabled = false;
+                    previewContainer.classList.add('d-none');
+                    result.classList.add('d-none');
+                };
+                reader.readAsDataURL(currentFile);
+            } else {
+                alert('Please upload an image file.');
+            }
+        }
+    }
+
+    function toggleImagePreview() {
+        previewContainer.classList.toggle('d-none');
+        showImageBtn.innerHTML = previewContainer.classList.contains('d-none') ? 
+            '<i class="bi bi-eye"></i> Show Image' : 
+            '<i class="bi bi-eye-slash"></i> Hide Image';
+    }
+
+    function predict() {
+        if (!currentFile) return;
+
+        const formData = new FormData();
+        formData.append('image', currentFile);
+
+        predictBtn.disabled = true;
+        predictBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Predicting...';
+
+        fetch('/predict', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            result.classList.remove('d-none');
+            document.getElementById('predictionText').textContent = data.prediction;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred during prediction.');
+        })
+        .finally(() => {
+            predictBtn.disabled = false;
+            predictBtn.innerHTML = '<i class="bi bi-search"></i> Predict Disease';
+        });
+    }
+</script>
+
+<!-- Bootstrap Icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+{% endblock content %}
